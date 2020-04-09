@@ -1,4 +1,5 @@
 import socket
+import os
 from struct import unpack, unpack_from
 
 class IpPacket(object):
@@ -47,9 +48,15 @@ def parse_network_layer_packet(ip_packet: bytes) -> IpPacket:
 
 
 def main():
+    if os.name == 'nt':
+        s = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_IP)
+        s.bind((socket.gethostbyname(socket.gethostname()), 0))
+        s.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
+        s.ioctl(socket.SIO_RCVALL, socket.RCVALL_ON)
+    else:
+        stealer = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.ntohs(0x0800))
     # Un-comment this line if you're getting too much noisy traffic.
     # to bind to an interface on your PC. (or you can simply disconnect from the internet)
-    stealer = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.ntohs(0x0800))
     # iface_name = "lo"
     # stealer.setsockopt(socket.SOL_SOCKET,
     #                    socket.SO_BINDTODEVICE, bytes(iface_name, "ASCII"))
