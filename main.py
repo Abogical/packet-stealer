@@ -63,7 +63,6 @@ def parse_application_layer_packet(ip_packet_payload: bytes) -> TcpPacket:
 def parse_network_layer_packet(ip_packet: bytes) -> IpPacket:
     # Parses raw bytes of an IPv4 packet
     # That's a byte literal (~byte array) check resources section
-    print(ip_packet)
     res = IpPacket(-1, -1, "0.0.0.0", "0.0.0.0", b'')
     headers = unpack('!B8xB2x4s4s', ip_packet[:20])
     if (headers[0] >> 4) == 4:
@@ -84,9 +83,13 @@ def main():
     #                    socket.SO_BINDTODEVICE, bytes(iface_name, "ASCII"))
     while True:
         # Receive packets and do processing here
-        ip_packet = parse_network_layer_packet(stealer.recvfrom(65565)[0])
-        print(ip_packet)
-        print(parse_application_layer_packet(ip_packet.payload))
+        tcp_packet = parse_application_layer_packet(parse_network_layer_packet(stealer.recvfrom(65565)[0]).payload)
+        try:
+            data = tcp_packet.payload.decode('utf-8')
+        except UnicodeError:
+            pass
+        else:
+            print(data)
 
 
 
