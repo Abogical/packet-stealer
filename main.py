@@ -35,6 +35,13 @@ class TcpPacket(object):
         self.data_offset = data_offset
         self.payload = payload
 
+    def __str__(self):
+        return (
+            f"Port {self.src_port} to port {self.dst_port}\n"
+            f"Data offset {self.data_offset}\n"
+            f"Payload: {self.payload}\n"
+        )
+
 
 def parse_raw_ip_addr(raw_ip_addr: bytes) -> str:
     # Converts a byte-array IP address to a string
@@ -45,16 +52,21 @@ def parse_raw_ip_addr(raw_ip_addr: bytes) -> str:
 def parse_application_layer_packet(ip_packet_payload: bytes) -> TcpPacket:
     # Parses raw bytes of a TCP packet
     # That's a byte literal (~byte array) check resources section
-    return TcpPacket(-1, -1, -1, b'')
+    res = TcpPacket(-1, -1, -1, b'')
+    headers = unpack('!HH8xB', ip_packet_payload[:13])
+    res.src_port, res.dst_port = headers[0:2]
+    res.data_offset = headers[2] >> 4
+    res.payload = ip_packet_payload[res.data_offset*4:]
+    return res
 
 
 def parse_network_layer_packet(ip_packet: bytes) -> IpPacket:
     # Parses raw bytes of an IPv4 packet
     # That's a byte literal (~byte array) check resources section
+    print(ip_packet)
     res = IpPacket(-1, -1, "0.0.0.0", "0.0.0.0", b'')
     headers = unpack('!B8xB2x4s4s', ip_packet[:20])
-    version = headers[0] >> 4
-    if version == 4:
+    if (headers[0] >> 4) == 4:
         res.ihl = headers[0] & 0xF
         res.protocol = headers[1]
         res.source_address = parse_raw_ip_addr(headers[2])
@@ -72,7 +84,9 @@ def main():
     #                    socket.SO_BINDTODEVICE, bytes(iface_name, "ASCII"))
     while True:
         # Receive packets and do processing here
-        print(parse_network_layer_packet(stealer.recvfrom(65565)[0]))
+        ip_packet = parse_network_layer_packet(stealer.recvfrom(65565)[0])
+        print(ip_packet)
+        print(parse_application_layer_packet(ip_packet.payload))
 
 
 
